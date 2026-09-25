@@ -2,62 +2,329 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <!-- スマホの画面自動拡大や意図しないバウンスを防ぐviewport設定 -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>360° パノラマビューア</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pannellum ホットスポット配置エディタ</title>
   
-  <!-- Pannellum CDN -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
   <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
 
   <style>
     * {
       box-sizing: border-box;
-      -webkit-touch-callout: none;
-    }
-    html, body {
       margin: 0;
       padding: 0;
-      width: 100%;
-      height: 100%;
+    }
+    body {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
       overflow: hidden;
-      background-color: #000;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+
+    /* パノラマ表示エリア */
+    #panorama-container {
+      flex: 1;
+      height: 100%;
+      position: relative;
     }
     #panorama {
       width: 100%;
       height: 100%;
     }
+
+    /* 右側の管理パネル */
+    #sidebar {
+      width: 380px;
+      height: 100%;
+      background: #242424;
+      border-left: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 14px;
+      z-index: 10;
+      overflow-y: auto;
+    }
+
+    h2 {
+      font-size: 16px;
+      color: #fff;
+      border-bottom: 1px solid #3a3a3a;
+      padding-bottom: 8px;
+    }
+
+    /* モード切り替え */
+    .mode-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #2f2f2f;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .mode-toggle input {
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+    }
+
+    .info-tip {
+      font-size: 12px;
+      color: #999;
+      line-height: 1.4;
+      background: #1e1e1e;
+      padding: 8px 10px;
+      border-radius: 4px;
+      border-left: 3px solid #007aff;
+    }
+
+    /* ピン一覧 */
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    #spot-list {
+      list-style: none;
+      max-height: 180px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: #1b1b1b;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #333;
+    }
+    .spot-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #2a2a2a;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .spot-item-info {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 260px;
+    }
+    .spot-delete-btn {
+      background: #ff453a;
+      color: #fff;
+      border: none;
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .spot-delete-btn:hover {
+      background: #d32f2f;
+    }
+
+    /* JSON出力エリア */
+    #json-output {
+      width: 100%;
+      height: 180px;
+      background: #111;
+      color: #30d158;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 8px;
+      font-family: monospace;
+      font-size: 11px;
+      resize: none;
+      white-space: pre;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-primary {
+      background: #007aff;
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: #0062cc;
+    }
   </style>
 </head>
 <body>
 
-<div id="panorama"></div>
+  <!-- 左：360° パノラマビュー -->
+  <div id="panorama-container">
+    <div id="panorama"></div>
+  </div>
+
+  <!-- 右：ホットスポット管理ツール -->
+  <div id="sidebar">
+    <h2>Hotspot Manager</h2>
+
+    <div class="mode-toggle">
+      <label for="add-mode-check" style="cursor:pointer;">ピン追加モード</label>
+      <input type="checkbox" id="add-mode-check" checked>
+    </div>
+
+    <div class="info-tip">
+      「ピン追加モード」がONのとき、画面をクリックするとその場所にピンが立ちます（ドラッグ操作での誤爆は自動防止されます）。
+    </div>
+
+    <div class="section-title">登録済みピン一覧 (<span id="spot-count">0</span>)</div>
+    <ul id="spot-list"></ul>
+
+    <div class="section-title">hotSpots 配列コード (JSON)</div>
+    <textarea id="json-output" readonly></textarea>
+
+    <button id="copy-btn" class="btn btn-primary">JSONコードをコピー</button>
+  </div>
 
 <script>
-  pannellum.viewer('panorama', {
+  let spots = []; // ホットスポットのデータ保持用配列
+
+  // Pannellumの初期化
+  const viewer = pannellum.viewer('panorama', {
     type: 'equirectangular',
-    panorama: './panorama.jpg',  // 必ず相対パス「./」で指定する
-    
-    // 表示・操作の制御
-    autoLoad: true,             // ページ表示時に即座に画像を読み込む
-    autoRotate: -1.5,           // 読み込み後の自動水平回転スピード（0で無効化）
-    autoRotateInactivityDelay: 3000, // ユーザーが操作を止めて3秒後に自動回転を再開
-    
-    // 画角（ズーム）の制限
-    hfov: 100,                  // 初期視野角（広角具合。標準は100程度）
-    minHfov: 50,                // 最大ズームイン制限（歪み防止）
-    maxHfov: 120,               // 最大ズームアウト制限（魚眼歪み防止）
-    
-    // モバイル・操作性設定
-    orientationOnByDefault: false, // スマホの傾き連動（ジャイロ）を最初からONにするか
-    showZoomCtrl: true,         // 画面上の +/- ズームボタン
-    showFullscreenCtrl: true,   // 全画面切り替えボタン
-    compass: true,              // コンパス（方位磁針）アイコンの表示
-    
-    // テキスト情報
-    title: '360° View Sample',
-    author: 'Takumi'
+    panorama: './panorama.jpg',
+    autoLoad: true,
+    showControls: true
   });
+
+  const container = document.getElementById('panorama');
+  const addModeCheck = document.getElementById('add-mode-check');
+  const spotListEl = document.getElementById('spot-list');
+  const jsonOutputEl = document.getElementById('json-output');
+  const copyBtn = document.getElementById('copy-btn');
+  const spotCountEl = document.getElementById('spot-count');
+
+  // --- ドラッグ視点操作とクリック（ピン配置）の判別 ---
+  let startX = 0;
+  let startY = 0;
+  let isDragging = false;
+
+  container.addEventListener('mousedown', (e) => {
+    startX = e.clientX;
+    startY = e.clientY;
+    isDragging = false;
+  });
+
+  container.addEventListener('mousemove', (e) => {
+    // 5px以上カーソルが動いたら「視点移動のドラッグ」とみなす
+    if (Math.hypot(e.clientX - startX, e.clientY - startY) > 5) {
+      isDragging = true;
+    }
+  });
+
+  container.addEventListener('mouseup', (e) => {
+    // ドラッグではなくクリック操作であり、かつ追加モードがONの場合のみピン作成
+    if (!isDragging && addModeCheck.checked) {
+      // Pannellum公式API: マウスイベントから球面座標 [pitch, yaw] を算出
+      const coords = viewer.mouseEventToCoords(e);
+      if (coords) {
+        const pitch = Number(coords[0].toFixed(2));
+        const yaw = Number(coords[1].toFixed(2));
+        
+        // ピンのテキストを入力
+        const title = prompt(`ピンのテキストを入力してください:\n座標: pitch=${pitch}, yaw=${yaw}`, `スポット ${spots.length + 1}`);
+        if (title !== null && title.trim() !== '') {
+          addSpot(pitch, yaw, title.trim());
+        }
+      }
+    }
+  });
+
+  // --- スポット追加処理 ---
+  function addSpot(pitch, yaw, text) {
+    const id = 'spot_' + Date.now();
+    const newSpot = { id, pitch, yaw, type: 'info', text };
+
+    spots.push(newSpot);
+
+    // Pannellumに動的描画
+    viewer.addHotSpot({
+      id: id,
+      pitch: pitch,
+      yaw: yaw,
+      type: 'info',
+      text: text
+    });
+
+    renderUI();
+  }
+
+  // --- スポット削除処理 ---
+  function removeSpot(id) {
+    spots = spots.filter(s => s.id !== id);
+    viewer.removeHotSpot(id); // Pannellumからピンを除去
+    renderUI();
+  }
+
+  // --- UI更新・JSON生成 ---
+  function renderUI() {
+    spotCountEl.textContent = spots.length;
+    spotListEl.innerHTML = '';
+
+    if (spots.length === 0) {
+      spotListEl.innerHTML = '<li style="color:#666;font-size:12px;padding:4px;">ピンがまだありません</li>';
+    }
+
+    spots.forEach((spot, idx) => {
+      const li = document.createElement('li');
+      li.className = 'spot-item';
+      li.innerHTML = `
+        <div class="spot-item-info">
+          <strong>#${idx + 1} ${spot.text}</strong><br>
+          <span style="color:#888;">P: ${spot.pitch} / Y: ${spot.yaw}</span>
+        </div>
+        <button class="spot-delete-btn" onclick="removeSpot('${spot.id}')">削除</button>
+      `;
+      spotListEl.appendChild(li);
+    });
+
+    // 本番コードにそのまま貼れる形式（内部用idを除いたオブジェクト）
+    const cleanOutput = spots.map(({ pitch, yaw, type, text }) => ({
+      pitch,
+      yaw,
+      type,
+      text
+    }));
+
+    jsonOutputEl.value = JSON.stringify(cleanOutput, null, 2);
+  }
+
+  // --- クリップボードにコピー ---
+  copyBtn.addEventListener('click', () => {
+    if (spots.length === 0) {
+      alert('コピーするピンが登録されていません。');
+      return;
+    }
+    navigator.clipboard.writeText(jsonOutputEl.value).then(() => {
+      const origText = copyBtn.textContent;
+      copyBtn.textContent = 'コピーしました！';
+      copyBtn.style.background = '#30d158';
+      setTimeout(() => {
+        copyBtn.textContent = origText;
+        copyBtn.style.background = '#007aff';
+      }, 1500);
+    });
+  });
+
+  // 初期レンダリング
+  renderUI();
 </script>
 
 </body>
