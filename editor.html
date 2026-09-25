@@ -3,17 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pannellum ホットスポット配置エディタ</title>
+  <title>Hotspot Editor (タイトル・説明文対応)</title>
   
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
   <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
 
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       display: flex;
       width: 100vw;
@@ -23,19 +19,9 @@
       background: #1a1a1a;
       color: #e0e0e0;
     }
+    #panorama-container { flex: 1; height: 100%; position: relative; }
+    #panorama { width: 100%; height: 100%; }
 
-    /* パノラマ表示エリア */
-    #panorama-container {
-      flex: 1;
-      height: 100%;
-      position: relative;
-    }
-    #panorama {
-      width: 100%;
-      height: 100%;
-    }
-
-    /* 右側の管理パネル */
     #sidebar {
       width: 380px;
       height: 100%;
@@ -44,52 +30,12 @@
       display: flex;
       flex-direction: column;
       padding: 16px;
-      gap: 14px;
-      z-index: 10;
+      gap: 12px;
       overflow-y: auto;
     }
+    h2 { font-size: 15px; color: #fff; padding-bottom: 6px; border-bottom: 1px solid #333; }
+    .tip { font-size: 11px; color: #aaa; background: #1c1c1c; padding: 8px; border-radius: 4px; line-height: 1.4; }
 
-    h2 {
-      font-size: 16px;
-      color: #fff;
-      border-bottom: 1px solid #3a3a3a;
-      padding-bottom: 8px;
-    }
-
-    /* モード切り替え */
-    .mode-toggle {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: #2f2f2f;
-      padding: 10px 12px;
-      border-radius: 6px;
-      font-size: 13px;
-    }
-    .mode-toggle input {
-      cursor: pointer;
-      width: 18px;
-      height: 18px;
-    }
-
-    .info-tip {
-      font-size: 12px;
-      color: #999;
-      line-height: 1.4;
-      background: #1e1e1e;
-      padding: 8px 10px;
-      border-radius: 4px;
-      border-left: 3px solid #007aff;
-    }
-
-    /* ピン一覧 */
-    .section-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: #aaa;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
     #spot-list {
       list-style: none;
       max-height: 180px;
@@ -97,27 +43,20 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      background: #1b1b1b;
+      background: #181818;
       padding: 8px;
       border-radius: 6px;
-      border: 1px solid #333;
     }
     .spot-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #2a2a2a;
+      background: #2c2c2c;
       padding: 6px 10px;
       border-radius: 4px;
       font-size: 12px;
     }
-    .spot-item-info {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: 260px;
-    }
-    .spot-delete-btn {
+    .del-btn {
       background: #ff453a;
       color: #fff;
       border: none;
@@ -126,14 +65,10 @@
       cursor: pointer;
       font-size: 11px;
     }
-    .spot-delete-btn:hover {
-      background: #d32f2f;
-    }
 
-    /* JSON出力エリア */
     #json-output {
       width: 100%;
-      height: 180px;
+      height: 160px;
       background: #111;
       color: #30d158;
       border: 1px solid #333;
@@ -141,190 +76,227 @@
       padding: 8px;
       font-family: monospace;
       font-size: 11px;
-      resize: none;
       white-space: pre;
     }
-
     .btn {
       width: 100%;
       padding: 10px;
       border: none;
       border-radius: 6px;
-      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s;
-    }
-    .btn-primary {
       background: #007aff;
       color: #fff;
     }
-    .btn-primary:hover {
-      background: #0062cc;
+
+    /* ピンとラベルのプレビュー用スタイル */
+    .custom-pin {
+      width: 18px !important;
+      height: 18px !important;
+      background-color: #007aff !important;
+      border: 2px solid #fff !important;
+      border-radius: 50% !important;
+      cursor: pointer;
+      position: relative;
     }
+    .custom-pin-label {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-top: 4px;
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    /* 入力ダイアログ */
+    #input-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 10000;
+      align-items: center; justify-content: center;
+    }
+    .input-box {
+      background: #2a2a2a;
+      padding: 20px;
+      border-radius: 10px;
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .input-box label { font-size: 12px; color: #aaa; }
+    .input-box input, .input-box textarea {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      color: #fff;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .input-box textarea { height: 70px; resize: none; }
+    .input-actions { display: flex; gap: 8px; margin-top: 6px; }
   </style>
 </head>
 <body>
 
-  <!-- 左：360° パノラマビュー -->
-  <div id="panorama-container">
-    <div id="panorama"></div>
-  </div>
+<div id="panorama-container">
+  <div id="panorama"></div>
+</div>
 
-  <!-- 右：ホットスポット管理ツール -->
-  <div id="sidebar">
-    <h2>Hotspot Manager</h2>
+<div id="sidebar">
+  <h2>Hotspot Manager</h2>
+  <div class="tip">画面をクリックすると、その場所に「タイトル」と「説明文」を設定できます。</div>
 
-    <div class="mode-toggle">
-      <label for="add-mode-check" style="cursor:pointer;">ピン追加モード</label>
-      <input type="checkbox" id="add-mode-check" checked>
+  <div style="font-size:12px; color:#888;">登録ピン一覧</div>
+  <ul id="spot-list"></ul>
+
+  <div style="font-size:12px; color:#888;">出力 JSON</div>
+  <textarea id="json-output" readonly></textarea>
+
+  <button id="copy-btn" class="btn">JSONをコピー</button>
+</div>
+
+<!-- クリック時の入力ポップアップ -->
+<div id="input-modal">
+  <div class="input-box">
+    <div style="font-weight:600; font-size:14px; color:#fff;">ピン情報の登録</div>
+    <div>
+      <label>タイトル（常時表示）</label>
+      <input type="text" id="spot-title-input" placeholder="例: 受付カウンター">
     </div>
-
-    <div class="info-tip">
-      「ピン追加モード」がONのとき、画面をクリックするとその場所にピンが立ちます（ドラッグ操作での誤爆は自動防止されます）。
+    <div>
+      <label>説明文（クリックで表示）</label>
+      <textarea id="spot-desc-input" placeholder="例: チェックイン手続きを行います。"></textarea>
     </div>
-
-    <div class="section-title">登録済みピン一覧 (<span id="spot-count">0</span>)</div>
-    <ul id="spot-list"></ul>
-
-    <div class="section-title">hotSpots 配列コード (JSON)</div>
-    <textarea id="json-output" readonly></textarea>
-
-    <button id="copy-btn" class="btn btn-primary">JSONコードをコピー</button>
+    <div class="input-actions">
+      <button class="btn" style="background:#555;" onclick="closeInputModal()">キャンセル</button>
+      <button class="btn" onclick="saveNewSpot()">追加</button>
+    </div>
   </div>
+</div>
 
 <script>
-  let spots = []; // ホットスポットのデータ保持用配列
+  let spots = [];
+  let tempCoords = null;
 
-  // Pannellumの初期化
   const viewer = pannellum.viewer('panorama', {
     type: 'equirectangular',
     panorama: './panorama.jpg',
-    autoLoad: true,
-    showControls: true
+    autoLoad: true
   });
 
   const container = document.getElementById('panorama');
-  const addModeCheck = document.getElementById('add-mode-check');
-  const spotListEl = document.getElementById('spot-list');
-  const jsonOutputEl = document.getElementById('json-output');
-  const copyBtn = document.getElementById('copy-btn');
-  const spotCountEl = document.getElementById('spot-count');
-
-  // --- ドラッグ視点操作とクリック（ピン配置）の判別 ---
-  let startX = 0;
-  let startY = 0;
-  let isDragging = false;
+  let startX = 0, startY = 0, isDragging = false;
 
   container.addEventListener('mousedown', (e) => {
-    startX = e.clientX;
-    startY = e.clientY;
-    isDragging = false;
+    startX = e.clientX; startY = e.clientY; isDragging = false;
   });
-
   container.addEventListener('mousemove', (e) => {
-    // 5px以上カーソルが動いたら「視点移動のドラッグ」とみなす
-    if (Math.hypot(e.clientX - startX, e.clientY - startY) > 5) {
-      isDragging = true;
-    }
+    if (Math.hypot(e.clientX - startX, e.clientY - startY) > 5) isDragging = true;
   });
-
   container.addEventListener('mouseup', (e) => {
-    // ドラッグではなくクリック操作であり、かつ追加モードがONの場合のみピン作成
-    if (!isDragging && addModeCheck.checked) {
-      // Pannellum公式API: マウスイベントから球面座標 [pitch, yaw] を算出
+    if (!isDragging) {
       const coords = viewer.mouseEventToCoords(e);
       if (coords) {
-        const pitch = Number(coords[0].toFixed(2));
-        const yaw = Number(coords[1].toFixed(2));
-        
-        // ピンのテキストを入力
-        const title = prompt(`ピンのテキストを入力してください:\n座標: pitch=${pitch}, yaw=${yaw}`, `スポット ${spots.length + 1}`);
-        if (title !== null && title.trim() !== '') {
-          addSpot(pitch, yaw, title.trim());
-        }
+        tempCoords = { pitch: Number(coords[0].toFixed(2)), yaw: Number(coords[1].toFixed(2)) };
+        document.getElementById('spot-title-input').value = '';
+        document.getElementById('spot-desc-input').value = '';
+        document.getElementById('input-modal').style.display = 'flex';
+        document.getElementById('spot-title-input').focus();
       }
     }
   });
 
-  // --- スポット追加処理 ---
-  function addSpot(pitch, yaw, text) {
-    const id = 'spot_' + Date.now();
-    const newSpot = { id, pitch, yaw, type: 'info', text };
-
-    spots.push(newSpot);
-
-    // Pannellumに動的描画
-    viewer.addHotSpot({
-      id: id,
-      pitch: pitch,
-      yaw: yaw,
-      type: 'info',
-      text: text
-    });
-
-    renderUI();
+  function closeInputModal() {
+    document.getElementById('input-modal').style.display = 'none';
   }
 
-  // --- スポット削除処理 ---
-  function removeSpot(id) {
-    spots = spots.filter(s => s.id !== id);
-    viewer.removeHotSpot(id); // Pannellumからピンを除去
-    renderUI();
-  }
-
-  // --- UI更新・JSON生成 ---
-  function renderUI() {
-    spotCountEl.textContent = spots.length;
-    spotListEl.innerHTML = '';
-
-    if (spots.length === 0) {
-      spotListEl.innerHTML = '<li style="color:#666;font-size:12px;padding:4px;">ピンがまだありません</li>';
+  function saveNewSpot() {
+    const title = document.getElementById('spot-title-input').value.trim();
+    const desc = document.getElementById('spot-desc-input').value.trim();
+    if (!title) {
+      alert('タイトルを入力してください');
+      return;
     }
 
-    spots.forEach((spot, idx) => {
+    const id = 'spot_' + Date.now();
+    const newSpot = {
+      id: id,
+      pitch: tempCoords.pitch,
+      yaw: tempCoords.yaw,
+      title: title,
+      description: desc
+    };
+    spots.push(newSpot);
+
+    // プレビュー表示（常時ラベル付き）
+    viewer.addHotSpot({
+      id: id,
+      pitch: newSpot.pitch,
+      yaw: newSpot.yaw,
+      cssClass: 'custom-pin',
+      createTooltipFunc: function(pin) {
+        const label = document.createElement('span');
+        label.className = 'custom-pin-label';
+        label.textContent = newSpot.title;
+        pin.appendChild(label);
+      }
+    });
+
+    closeInputModal();
+    renderUI();
+  }
+
+  function removeSpot(id) {
+    spots = spots.filter(s => s.id !== id);
+    viewer.removeHotSpot(id);
+    renderUI();
+  }
+
+  function renderUI() {
+    const listEl = document.getElementById('spot-list');
+    listEl.innerHTML = '';
+    spots.forEach((spot) => {
       const li = document.createElement('li');
       li.className = 'spot-item';
       li.innerHTML = `
-        <div class="spot-item-info">
-          <strong>#${idx + 1} ${spot.text}</strong><br>
-          <span style="color:#888;">P: ${spot.pitch} / Y: ${spot.yaw}</span>
+        <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:260px;">
+          <strong>${spot.title}</strong><br>
+          <span style="color:#888; font-size:11px;">${spot.description || '(説明なし)'}</span>
         </div>
-        <button class="spot-delete-btn" onclick="removeSpot('${spot.id}')">削除</button>
+        <button class="del-btn" onclick="removeSpot('${spot.id}')">削除</button>
       `;
-      spotListEl.appendChild(li);
+      listEl.appendChild(li);
     });
 
-    // 本番コードにそのまま貼れる形式（内部用idを除いたオブジェクト）
-    const cleanOutput = spots.map(({ pitch, yaw, type, text }) => ({
-      pitch,
-      yaw,
-      type,
-      text
+    const cleanData = spots.map(({ pitch, yaw, title, description }) => ({
+      pitch, yaw, title, description
     }));
-
-    jsonOutputEl.value = JSON.stringify(cleanOutput, null, 2);
+    document.getElementById('json-output').value = JSON.stringify(cleanData, null, 2);
   }
 
-  // --- クリップボードにコピー ---
-  copyBtn.addEventListener('click', () => {
-    if (spots.length === 0) {
-      alert('コピーするピンが登録されていません。');
-      return;
-    }
-    navigator.clipboard.writeText(jsonOutputEl.value).then(() => {
-      const origText = copyBtn.textContent;
-      copyBtn.textContent = 'コピーしました！';
-      copyBtn.style.background = '#30d158';
+  document.getElementById('copy-btn').addEventListener('click', () => {
+    const json = document.getElementById('json-output').value;
+    if (!json || json === '[]') return alert('ピンがありません');
+    navigator.clipboard.writeText(json).then(() => {
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = 'コピーしました！';
+      btn.style.background = '#30d158';
       setTimeout(() => {
-        copyBtn.textContent = origText;
-        copyBtn.style.background = '#007aff';
+        btn.textContent = 'JSONをコピー';
+        btn.style.background = '#007aff';
       }, 1500);
     });
   });
-
-  // 初期レンダリング
-  renderUI();
 </script>
 
 </body>
