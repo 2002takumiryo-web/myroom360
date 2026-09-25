@@ -3,13 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hotspot Editor (タイトル・説明文対応)</title>
+  <title>Pannellum ホットスポット配置エディタ</title>
   
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
   <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
 
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
     body {
       display: flex;
       width: 100vw;
@@ -19,8 +23,16 @@
       background: #1a1a1a;
       color: #e0e0e0;
     }
-    #panorama-container { flex: 1; height: 100%; position: relative; }
-    #panorama { width: 100%; height: 100%; }
+
+    #panorama-container {
+      flex: 1;
+      height: 100%;
+      position: relative;
+    }
+    #panorama {
+      width: 100%;
+      height: 100%;
+    }
 
     #sidebar {
       width: 380px;
@@ -32,9 +44,282 @@
       padding: 16px;
       gap: 12px;
       overflow-y: auto;
+      z-index: 10;
     }
-    h2 { font-size: 15px; color: #fff; padding-bottom: 6px; border-bottom: 1px solid #333; }
-    .tip { font-size: 11px; color: #aaa; background: #1c1c1c; padding: 8px; border-radius: 4px; line-height: 1.4; }
+
+    h2 {
+      font-size: 15px;
+      color: #fff;
+      border-bottom: 1px solid #3a3a3a;
+      padding-bottom: 8px;
+    }
+
+    .info-tip {
+      font-size: 12px;
+      color: #aaa;
+      background: #1a1a1a;
+      padding: 10px;
+      border-radius: 6px;
+      line-height: 1.5;
+      border-left: 3px solid #007aff;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+    }
+
+    #spot-list {
+      list-style: none;
+      max-height: 200px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: #181818;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #333;
+    }
+    .spot-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #2a2a2a;
+      padding: 8px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .spot-info {
+      max-width: 250px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .spot-del-btn {
+      background: #ff453a;
+      color: #fff;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+
+    #json-output {
+      width: 100%;
+      height: 180px;
+      background: #111;
+      color: #30d158;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 8px;
+      font-family: monospace;
+      font-size: 11px;
+      resize: none;
+      white-space: pre;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 11px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #007aff;
+      color: #fff;
+      transition: background 0.2s;
+    }
+
+    /* --- 位置ズレを防ぐピンとラベルの正確なスタイル --- */
+    .editor-pin {
+      width: 20px !important;
+      height: 20px !important;
+      /* 中心をクリック位置に合わせるためのマイナスマージン（幅・高さの半分） */
+      margin-left: -10px !important;
+      margin-top: -10px !important;
+      background-color: #007aff !important;
+      border: 2px solid #ffffff !important;
+      border-radius: 50% !important;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+      cursor: pointer;
+    }
+    .editor-pin-label {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-top: 5px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #ffffff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+      pointer-events: none; /* ラベルがクリック判定を邪魔しないようにする */
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="panorama-container">
+    <div id="panorama"></div>
+  </div>
+
+  <div id="sidebar">
+    <h2>Hotspot Manager</h2>
+    <div class="info-tip">
+      ① 画面上でピンを立てたい場所をクリックします。<br>
+      ②「タイトル」と「説明文」を順番に入力します。<br>
+      ③ 最後に「JSONをコピー」を押して本番に貼り付けます。
+    </div>
+
+    <div class="section-title">登録ピン (<span id="spot-count">0</span>)</div>
+    <ul id="spot-list"></ul>
+
+    <div class="section-title">本番用 JSON 配列</div>
+    <textarea id="json-output" readonly></textarea>
+
+    <button id="copy-btn" class="btn">JSONをコピー</button>
+  </div>
+
+<script>
+  let spots = [];
+
+  const viewer = pannellum.viewer('panorama', {
+    type: 'equirectangular',
+    panorama: './panorama.jpg',
+    autoLoad: true,
+    showControls: true
+  });
+
+  const container = document.getElementById('panorama');
+  let startX = 0, startY = 0, isDragging = false;
+
+  container.addEventListener('mousedown', (e) => {
+    startX = e.clientX;
+    startY = e.clientY;
+    isDragging = false;
+  });
+
+  container.addEventListener('mousemove', (e) => {
+    // 5px以上動いたら視点回転操作とみなす
+    if (Math.hypot(e.clientX - startX, e.clientY - startY) > 5) {
+      isDragging = true;
+    }
+  });
+
+  container.addEventListener('mouseup', (e) => {
+    if (!isDragging) {
+      // 1回目のコードと全く同じ正確な座標計算
+      const coords = viewer.mouseEventToCoords(e);
+      if (coords) {
+        const pitch = Number(coords[0].toFixed(2));
+        const yaw = Number(coords[1].toFixed(2));
+
+        // 1. タイトルの入力
+        const title = prompt(`【1/2】ピンの「タイトル（常時表示）」を入力してください:\n座標: pitch=${pitch}, yaw=${yaw}`);
+        if (!title || !title.trim()) return;
+
+        // 2. 説明文の入力（空欄でもOK）
+        const desc = prompt(`【2/2】「${title}」の「説明文（クリックで表示）」を入力してください:\n（空欄のままでも登録できます）`, "");
+        if (desc === null) return;
+
+        addSpot(pitch, yaw, title.trim(), desc.trim());
+      }
+    }
+  });
+
+  function addSpot(pitch, yaw, title, description) {
+    const id = 'spot_' + Date.now();
+    const newSpot = { id, pitch, yaw, title, description };
+    spots.push(newSpot);
+
+    // ビューア上に描画（中心補正済みピン + 常時ラベル）
+    viewer.addHotSpot({
+      id: id,
+      pitch: pitch,
+      yaw: yaw,
+      cssClass: 'editor-pin',
+      createTooltipFunc: function(pinEl) {
+        const label = document.createElement('span');
+        label.className = 'editor-pin-label';
+        label.textContent = title;
+        pinEl.appendChild(label);
+
+        // クリック時に説明文をプレビュー表示
+        pinEl.addEventListener('click', () => {
+          alert(`【${title}】\n\n${description || '(説明文なし)'}`);
+        });
+      }
+    });
+
+    renderUI();
+  }
+
+  function removeSpot(id) {
+    spots = spots.filter(s => s.id !== id);
+    viewer.removeHotSpot(id);
+    renderUI();
+  }
+
+  function renderUI() {
+    document.getElementById('spot-count').textContent = spots.length;
+    const listEl = document.getElementById('spot-list');
+    listEl.innerHTML = '';
+
+    if (spots.length === 0) {
+      listEl.innerHTML = '<li style="color:#666;font-size:12px;padding:4px;">ピンがまだありません</li>';
+    }
+
+    spots.forEach((spot) => {
+      const li = document.createElement('li');
+      li.className = 'spot-item';
+      li.innerHTML = `
+        <div class="spot-info">
+          <strong>${spot.title}</strong><br>
+          <span style="color:#888; font-size:11px;">${spot.description || '(説明なし)'}</span>
+        </div>
+        <button class="spot-del-btn" onclick="removeSpot('${spot.id}')">削除</button>
+      `;
+      listEl.appendChild(li);
+    });
+
+    // 本番の index.html に貼るためのクリーンなデータ
+    const cleanData = spots.map(({ pitch, yaw, title, description }) => ({
+      pitch,
+      yaw,
+      title,
+      description
+    }));
+
+    document.getElementById('json-output').value = JSON.stringify(cleanData, null, 2);
+  }
+
+  document.getElementById('copy-btn').addEventListener('click', () => {
+    if (spots.length === 0) return alert('コピーするピンがありません');
+    navigator.clipboard.writeText(document.getElementById('json-output').value).then(() => {
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = 'コピーしました！';
+      btn.style.background = '#30d158';
+      setTimeout(() => {
+        btn.textContent = 'JSONをコピー';
+        btn.style.background = '#007aff';
+      }, 1500);
+    });
+  });
+
+  renderUI();
+</script>
+
+</body>
+</html>    .tip { font-size: 11px; color: #aaa; background: #1c1c1c; padding: 8px; border-radius: 4px; line-height: 1.4; }
 
     #spot-list {
       list-style: none;
