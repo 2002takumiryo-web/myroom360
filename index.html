@@ -26,43 +26,48 @@
       height: 100%;
     }
 
-    /* --- ピン本体のデザイン --- */
+    /* --- ピン本体（小さめ・半透明） --- */
     .custom-pin {
-      width: 20px !important;
-      height: 20px !important;
-      background-color: #007aff !important;
-      border: 2.5px solid #ffffff !important;
+      width: 14px !important;
+      height: 14px !important;
+      margin-left: -7px !important;
+      margin-top: -7px !important;
+      background-color: rgba(0, 122, 255, 0.6) !important;
+      border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
       border-radius: 50% !important;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
       cursor: pointer;
-      position: relative;
-      transition: transform 0.2s ease, background-color 0.2s ease;
+      backdrop-filter: blur(2px);
+      transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
     }
     .custom-pin:hover {
-      transform: scale(1.2);
-      background-color: #0056b3 !important;
+      transform: scale(1.3);
+      background-color: rgba(0, 122, 255, 1.0) !important;
+      border-color: #ffffff !important;
+      box-shadow: 0 0 10px rgba(0, 122, 255, 0.6);
     }
 
-    /* --- 常時表示するタイトルラベル --- */
+    /* --- タイトルラベル --- */
     .custom-pin-label {
       position: absolute;
       top: 100%;
       left: 50%;
       transform: translateX(-50%);
-      margin-top: 6px;
-      background: rgba(0, 0, 0, 0.75);
-      color: #ffffff;
-      padding: 3px 8px;
+      margin-top: 5px;
+      background: rgba(0, 0, 0, 0.55);
+      color: rgba(255, 255, 255, 0.9);
+      padding: 2px 6px;
       border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
+      font-size: 10px;
+      font-weight: 500;
       white-space: nowrap;
-      pointer-events: none; /* ラベルをクリックしてもピンのクリックが反応するようにする */
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      pointer-events: none;
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
-    /* --- ポップアップモーダル（説明画面） --- */
+    /* --- ポップアップモーダル --- */
     #modal-overlay {
       display: none;
       position: fixed;
@@ -105,7 +110,7 @@
       font-size: 14px;
       line-height: 1.6;
       color: #3a3a3c;
-      white-space: pre-wrap; /* 改行をそのまま反映 */
+      white-space: pre-wrap;
     }
     .modal-close-btn {
       display: block;
@@ -127,7 +132,6 @@
 
 <div id="panorama"></div>
 
-<!-- モーダルウィンドウ本体 -->
 <div id="modal-overlay" onclick="closeModal(event)">
   <div class="modal-card">
     <h3 id="modal-title" class="modal-title"></h3>
@@ -137,120 +141,147 @@
 </div>
 
 <script>
-  // ▼▼ ここに管理エディタで作成・コピーしたピン一覧を貼り付けます ▼▼
+  // ▼▼ editor.html で作成・コピーした配列をここに貼り付け ▼▼
   const spotsData = [
   {
-    "pitch": 21.4,
-    "yaw": 88.12,
+    "pitch": 27.35,
+    "yaw": 87.36,
     "title": "モネの睡蓮（自作）",
-    "description": "上野の絵画教室で描いた。我ながら色味が良い。"
+    "description": "上野の絵画教室で描いた。我ながら色味が良い。今度はシニャックの点描画を描きに行く予定。"
   },
   {
-    "pitch": 13.04,
-    "yaw": 109.18,
+    "pitch": 8.72,
+    "yaw": 108.76,
     "title": "赤べこ",
-    "description": "大内宿で購入。しっかり頭が揺れる。可愛い。"
+    "description": "福島の大内宿で購入。しっかり頭が揺れる。可愛い。"
   },
   {
-    "pitch": 2.31,
-    "yaw": 109.79,
+    "pitch": 8.2,
+    "yaw": 118.95,
+    "title": "suicaのペンギン",
+    "description": "東京駅のNEWDAYSで一目惚れ。引退しないで欲しい。ちなみにsuicaの新キャラはC案に投票した。"
+  },
+  {
+    "pitch": -0.7,
+    "yaw": 107.78,
     "title": "ポストカード",
     "description": "美術館に行くと必ず買っている。好きな画家はモネ、ルノワール、シニャック。壁一面を埋めるまで貼り続ける。"
   },
   {
-    "pitch": 10.62,
-    "yaw": 128.72,
+    "pitch": 5.32,
+    "yaw": 128.9,
     "title": "モネの画集",
     "description": "表紙がオシャレすぎて即購入。"
   },
   {
-    "pitch": 13.44,
-    "yaw": 119.24,
-    "title": "suicaのペンギン",
-    "description": "東京駅のNEWDAYSで一目惚れ。"
-  },
-  {
-    "pitch": -14.96,
-    "yaw": 139.87,
+    "pitch": -15.12,
+    "yaw": 139.82,
     "title": "サボテン",
-    "description": "いつの日か顔に刺さるとは思いながら枕元に飾っている。"
+    "description": "いつの日か顔に刺さるとは思いながら枕元に飾っている。赤とオレンジが良い差し色である。"
   },
   {
-    "pitch": -18.46,
-    "yaw": -173.56,
+    "pitch": -19.61,
+    "yaw": 158.89,
+    "title": "観葉植物",
+    "description": "1ヶ月に1つのペースで増えている。流石に置き場が無くなり困っている。"
+  },
+  {
+    "pitch": -6.91,
+    "yaw": 163.46,
+    "title": "スポットライト",
+    "description": "耳が生えている謎の動物型ライト。古家具屋で買った。"
+  },
+  {
+    "pitch": -23.46,
+    "yaw": -173.4,
     "title": "QGIS",
     "description": "研究で使用している地図作成ソフト。基本こいつと睨めっこしている。"
   },
   {
-    "pitch": -19.92,
-    "yaw": -159.85,
+    "pitch": -25.45,
+    "yaw": -159.73,
     "title": "スピーカー",
-    "description": "モニター付きの可愛いスピーカー。ボタンの押し心地がものすごく良い。"
+    "description": "モニター付きの可愛いスピーカー。ボタンの押し心地がものすごく良い。その代わり音質はボチボチ。"
   },
   {
-    "pitch": -12.79,
-    "yaw": -156.01,
+    "pitch": -0.73,
+    "yaw": -173.5,
+    "title": "モニター",
+    "description": "絶対にないと不便。"
+  },
+  {
+    "pitch": -16.79,
+    "yaw": -163.78,
+    "title": "シーサーの小物入れ",
+    "description": "沖縄の石垣島で購入。良い顔をしている。"
+  },
+  {
+    "pitch": -17.53,
+    "yaw": -154.56,
     "title": "サボテン",
     "description": "カーテンを開ける時に手に刺さる。痛い。"
   },
   {
-    "pitch": -31.98,
-    "yaw": -103.72,
+    "pitch": -36.64,
+    "yaw": -92.82,
     "title": "ベース",
     "description": "高校で軽音部に入ってからずっと続けている。この2本以外にももう2本所有している。"
   },
   {
-    "pitch": 7.95,
-    "yaw": -95.99,
+    "pitch": 4.55,
+    "yaw": -95.8,
     "title": "ネクタイとベルト",
-    "description": "ネクタイ集めにハマっていた時期があった。最近はめんどくさいので滅多につけない。"
+    "description": "ネクタイ集めにハマっていた時期があった。しかし最近はめんどくさいので滅多につけない。"
   },
   {
-    "pitch": 19.5,
-    "yaw": -24.4,
+    "pitch": -32.19,
+    "yaw": -115.97,
+    "title": "ベースアンプ",
+    "description": "最近はパソコンを通してベースを聴いているので、今ではただのインテリアになってしまっている。"
+  },
+  {
+    "pitch": 15.16,
+    "yaw": -24.75,
     "title": "サウナハット",
     "description": "最近サウナにハマっていて、週1はサウナに通っている。サウナハットを被ることで頭が熱くなりすぎないので、じっくりサウナを楽しむことができる。"
   },
   {
-    "pitch": 17.7,
-    "yaw": 44.88,
+    "pitch": 12.35,
+    "yaw": 50.22,
     "title": "ヘルメット",
     "description": "1月にバイクの免許を取得。愛車はHONDA Rebel 250。夢はバイクで北海道1周。"
   },
   {
-    "pitch": 12.18,
-    "yaw": 55.07,
+    "pitch": 9.23,
+    "yaw": 55.18,
     "title": "くまモン",
     "description": "熊本旅行の際に一目惚れ。"
   },
   {
-    "pitch": -13.57,
-    "yaw": 55.8,
+    "pitch": -10.6,
+    "yaw": 55.94,
     "title": "漫画置き場",
-    "description": "進撃の巨人、よふかしのうた、藤本タツキ短編集など。"
+    "description": "進撃の巨人、よふかしのうた、藤本タツキ短編集など。最近は、漫画は買わずにネカフェで読んでいるため、本当に気に入った漫画しか買っていない。"
   },
   {
-    "pitch": 1.68,
-    "yaw": 58.26,
+    "pitch": -2.89,
+    "yaw": 59.28,
     "title": "朝井リョウの小説",
-    "description": "一番好きな作家、朝井リョウ。中でも「正欲」が一番刺さった。たまに冒頭部分を読み返す。"
+    "description": "一番好きな作家、朝井リョウ。中でも「正欲」が一番好き。たまに冒頭部分を読み返す。"
   }
 ];
-  // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+  // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
-  // データをPannellumのホットスポット形式に変換
   const formattedHotSpots = spotsData.map(item => ({
     pitch: item.pitch,
     yaw: item.yaw,
     cssClass: 'custom-pin',
     createTooltipFunc: function(pinElement) {
-      // 1. 常時表示タイトルラベルの追加
       const label = document.createElement('span');
       label.className = 'custom-pin-label';
       label.textContent = item.title;
       pinElement.appendChild(label);
 
-      // 2. ピンをクリックした時のポップアップ発火
       pinElement.addEventListener('click', (e) => {
         e.stopPropagation();
         showModal(item.title, item.description);
@@ -258,7 +289,6 @@
     }
   }));
 
-  // Pannellum初期化
   pannellum.viewer('panorama', {
     type: 'equirectangular',
     panorama: './panorama.jpg',
@@ -268,10 +298,9 @@
     hotSpots: formattedHotSpots
   });
 
-  // モーダル表示制御
   function showModal(title, desc) {
     document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-description').textContent = desc;
+    document.getElementById('modal-description').textContent = desc || '（説明はありません）';
     const overlay = document.getElementById('modal-overlay');
     overlay.style.display = 'flex';
     setTimeout(() => overlay.classList.add('active'), 10);
@@ -284,38 +313,10 @@
   }
 
   function closeModal(event) {
-    // 背景（黒い部分）をクリックしたときだけ閉じる
     if (event.target.id === 'modal-overlay') {
       hideModal();
     }
   }
-</script>
-
-</body>
-</html>  pannellum.viewer('panorama', {
-    type: 'equirectangular',
-    panorama: './panorama.jpg',  // 必ず相対パス「./」で指定する
-    
-    // 表示・操作の制御
-    autoLoad: true,             // ページ表示時に即座に画像を読み込む
-    autoRotate: -1.5,           // 読み込み後の自動水平回転スピード（0で無効化）
-    autoRotateInactivityDelay: 3000, // ユーザーが操作を止めて3秒後に自動回転を再開
-    
-    // 画角（ズーム）の制限
-    hfov: 100,                  // 初期視野角（広角具合。標準は100程度）
-    minHfov: 50,                // 最大ズームイン制限（歪み防止）
-    maxHfov: 120,               // 最大ズームアウト制限（魚眼歪み防止）
-    
-    // モバイル・操作性設定
-    orientationOnByDefault: false, // スマホの傾き連動（ジャイロ）を最初からONにするか
-    showZoomCtrl: true,         // 画面上の +/- ズームボタン
-    showFullscreenCtrl: true,   // 全画面切り替えボタン
-    compass: true,              // コンパス（方位磁針）アイコンの表示
-    
-    // テキスト情報
-    title: '360° View Sample',
-    author: 'Takumi'
-  });
 </script>
 
 </body>
