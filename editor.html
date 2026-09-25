@@ -135,11 +135,10 @@
       transition: background 0.2s;
     }
 
-    /* --- 位置ズレを防ぐピンとラベルの正確なスタイル --- */
+    /* ピンの中心とクリック位置を完全に一致させる補正 */
     .editor-pin {
       width: 20px !important;
       height: 20px !important;
-      /* 中心をクリック位置に合わせるためのマイナスマージン（幅・高さの半分） */
       margin-left: -10px !important;
       margin-top: -10px !important;
       background-color: #007aff !important;
@@ -161,7 +160,7 @@
       font-size: 10px;
       font-weight: 600;
       white-space: nowrap;
-      pointer-events: none; /* ラベルがクリック判定を邪魔しないようにする */
+      pointer-events: none;
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
   </style>
@@ -209,7 +208,6 @@
   });
 
   container.addEventListener('mousemove', (e) => {
-    // 5px以上動いたら視点回転操作とみなす
     if (Math.hypot(e.clientX - startX, e.clientY - startY) > 5) {
       isDragging = true;
     }
@@ -217,17 +215,16 @@
 
   container.addEventListener('mouseup', (e) => {
     if (!isDragging) {
-      // 1回目のコードと全く同じ正確な座標計算
       const coords = viewer.mouseEventToCoords(e);
       if (coords) {
         const pitch = Number(coords[0].toFixed(2));
         const yaw = Number(coords[1].toFixed(2));
 
-        // 1. タイトルの入力
+        // 1. タイトル入力
         const title = prompt(`【1/2】ピンの「タイトル（常時表示）」を入力してください:\n座標: pitch=${pitch}, yaw=${yaw}`);
         if (!title || !title.trim()) return;
 
-        // 2. 説明文の入力（空欄でもOK）
+        // 2. 説明文入力
         const desc = prompt(`【2/2】「${title}」の「説明文（クリックで表示）」を入力してください:\n（空欄のままでも登録できます）`, "");
         if (desc === null) return;
 
@@ -241,7 +238,6 @@
     const newSpot = { id, pitch, yaw, title, description };
     spots.push(newSpot);
 
-    // ビューア上に描画（中心補正済みピン + 常時ラベル）
     viewer.addHotSpot({
       id: id,
       pitch: pitch,
@@ -253,7 +249,6 @@
         label.textContent = title;
         pinEl.appendChild(label);
 
-        // クリック時に説明文をプレビュー表示
         pinEl.addEventListener('click', () => {
           alert(`【${title}】\n\n${description || '(説明文なし)'}`);
         });
@@ -291,7 +286,6 @@
       listEl.appendChild(li);
     });
 
-    // 本番の index.html に貼るためのクリーンなデータ
     const cleanData = spots.map(({ pitch, yaw, title, description }) => ({
       pitch,
       yaw,
@@ -316,272 +310,6 @@
   });
 
   renderUI();
-</script>
-
-</body>
-</html>    .tip { font-size: 11px; color: #aaa; background: #1c1c1c; padding: 8px; border-radius: 4px; line-height: 1.4; }
-
-    #spot-list {
-      list-style: none;
-      max-height: 180px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      background: #181818;
-      padding: 8px;
-      border-radius: 6px;
-    }
-    .spot-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #2c2c2c;
-      padding: 6px 10px;
-      border-radius: 4px;
-      font-size: 12px;
-    }
-    .del-btn {
-      background: #ff453a;
-      color: #fff;
-      border: none;
-      padding: 3px 8px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 11px;
-    }
-
-    #json-output {
-      width: 100%;
-      height: 160px;
-      background: #111;
-      color: #30d158;
-      border: 1px solid #333;
-      border-radius: 6px;
-      padding: 8px;
-      font-family: monospace;
-      font-size: 11px;
-      white-space: pre;
-    }
-    .btn {
-      width: 100%;
-      padding: 10px;
-      border: none;
-      border-radius: 6px;
-      font-weight: 600;
-      cursor: pointer;
-      background: #007aff;
-      color: #fff;
-    }
-
-    /* ピンとラベルのプレビュー用スタイル */
-    .custom-pin {
-      width: 18px !important;
-      height: 18px !important;
-      background-color: #007aff !important;
-      border: 2px solid #fff !important;
-      border-radius: 50% !important;
-      cursor: pointer;
-      position: relative;
-    }
-    .custom-pin-label {
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      margin-top: 4px;
-      background: rgba(0,0,0,0.8);
-      color: #fff;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-size: 10px;
-      white-space: nowrap;
-      pointer-events: none;
-    }
-
-    /* 入力ダイアログ */
-    #input-modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.7);
-      z-index: 10000;
-      align-items: center; justify-content: center;
-    }
-    .input-box {
-      background: #2a2a2a;
-      padding: 20px;
-      border-radius: 10px;
-      width: 320px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .input-box label { font-size: 12px; color: #aaa; }
-    .input-box input, .input-box textarea {
-      width: 100%;
-      background: #1a1a1a;
-      border: 1px solid #444;
-      color: #fff;
-      padding: 8px;
-      border-radius: 4px;
-      font-size: 13px;
-    }
-    .input-box textarea { height: 70px; resize: none; }
-    .input-actions { display: flex; gap: 8px; margin-top: 6px; }
-  </style>
-</head>
-<body>
-
-<div id="panorama-container">
-  <div id="panorama"></div>
-</div>
-
-<div id="sidebar">
-  <h2>Hotspot Manager</h2>
-  <div class="tip">画面をクリックすると、その場所に「タイトル」と「説明文」を設定できます。</div>
-
-  <div style="font-size:12px; color:#888;">登録ピン一覧</div>
-  <ul id="spot-list"></ul>
-
-  <div style="font-size:12px; color:#888;">出力 JSON</div>
-  <textarea id="json-output" readonly></textarea>
-
-  <button id="copy-btn" class="btn">JSONをコピー</button>
-</div>
-
-<!-- クリック時の入力ポップアップ -->
-<div id="input-modal">
-  <div class="input-box">
-    <div style="font-weight:600; font-size:14px; color:#fff;">ピン情報の登録</div>
-    <div>
-      <label>タイトル（常時表示）</label>
-      <input type="text" id="spot-title-input" placeholder="例: 受付カウンター">
-    </div>
-    <div>
-      <label>説明文（クリックで表示）</label>
-      <textarea id="spot-desc-input" placeholder="例: チェックイン手続きを行います。"></textarea>
-    </div>
-    <div class="input-actions">
-      <button class="btn" style="background:#555;" onclick="closeInputModal()">キャンセル</button>
-      <button class="btn" onclick="saveNewSpot()">追加</button>
-    </div>
-  </div>
-</div>
-
-<script>
-  let spots = [];
-  let tempCoords = null;
-
-  const viewer = pannellum.viewer('panorama', {
-    type: 'equirectangular',
-    panorama: './panorama.jpg',
-    autoLoad: true
-  });
-
-  const container = document.getElementById('panorama');
-  let startX = 0, startY = 0, isDragging = false;
-
-  container.addEventListener('mousedown', (e) => {
-    startX = e.clientX; startY = e.clientY; isDragging = false;
-  });
-  container.addEventListener('mousemove', (e) => {
-    if (Math.hypot(e.clientX - startX, e.clientY - startY) > 5) isDragging = true;
-  });
-  container.addEventListener('mouseup', (e) => {
-    if (!isDragging) {
-      const coords = viewer.mouseEventToCoords(e);
-      if (coords) {
-        tempCoords = { pitch: Number(coords[0].toFixed(2)), yaw: Number(coords[1].toFixed(2)) };
-        document.getElementById('spot-title-input').value = '';
-        document.getElementById('spot-desc-input').value = '';
-        document.getElementById('input-modal').style.display = 'flex';
-        document.getElementById('spot-title-input').focus();
-      }
-    }
-  });
-
-  function closeInputModal() {
-    document.getElementById('input-modal').style.display = 'none';
-  }
-
-  function saveNewSpot() {
-    const title = document.getElementById('spot-title-input').value.trim();
-    const desc = document.getElementById('spot-desc-input').value.trim();
-    if (!title) {
-      alert('タイトルを入力してください');
-      return;
-    }
-
-    const id = 'spot_' + Date.now();
-    const newSpot = {
-      id: id,
-      pitch: tempCoords.pitch,
-      yaw: tempCoords.yaw,
-      title: title,
-      description: desc
-    };
-    spots.push(newSpot);
-
-    // プレビュー表示（常時ラベル付き）
-    viewer.addHotSpot({
-      id: id,
-      pitch: newSpot.pitch,
-      yaw: newSpot.yaw,
-      cssClass: 'custom-pin',
-      createTooltipFunc: function(pin) {
-        const label = document.createElement('span');
-        label.className = 'custom-pin-label';
-        label.textContent = newSpot.title;
-        pin.appendChild(label);
-      }
-    });
-
-    closeInputModal();
-    renderUI();
-  }
-
-  function removeSpot(id) {
-    spots = spots.filter(s => s.id !== id);
-    viewer.removeHotSpot(id);
-    renderUI();
-  }
-
-  function renderUI() {
-    const listEl = document.getElementById('spot-list');
-    listEl.innerHTML = '';
-    spots.forEach((spot) => {
-      const li = document.createElement('li');
-      li.className = 'spot-item';
-      li.innerHTML = `
-        <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:260px;">
-          <strong>${spot.title}</strong><br>
-          <span style="color:#888; font-size:11px;">${spot.description || '(説明なし)'}</span>
-        </div>
-        <button class="del-btn" onclick="removeSpot('${spot.id}')">削除</button>
-      `;
-      listEl.appendChild(li);
-    });
-
-    const cleanData = spots.map(({ pitch, yaw, title, description }) => ({
-      pitch, yaw, title, description
-    }));
-    document.getElementById('json-output').value = JSON.stringify(cleanData, null, 2);
-  }
-
-  document.getElementById('copy-btn').addEventListener('click', () => {
-    const json = document.getElementById('json-output').value;
-    if (!json || json === '[]') return alert('ピンがありません');
-    navigator.clipboard.writeText(json).then(() => {
-      const btn = document.getElementById('copy-btn');
-      btn.textContent = 'コピーしました！';
-      btn.style.background = '#30d158';
-      setTimeout(() => {
-        btn.textContent = 'JSONをコピー';
-        btn.style.background = '#007aff';
-      }, 1500);
-    });
-  });
 </script>
 
 </body>
