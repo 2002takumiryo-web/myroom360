@@ -2,18 +2,26 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>360° View</title>
-  <!-- Pannellum の CSS / JS を読み込み -->
+  <!-- スマホの画面自動拡大や意図しないバウンスを防ぐviewport設定 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>360° パノラマビューア</title>
+  
+  <!-- Pannellum CDN -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
   <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+
   <style>
+    * {
+      box-sizing: border-box;
+      -webkit-touch-callout: none;
+    }
     html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
+      background-color: #000;
     }
     #panorama {
       width: 100%;
@@ -28,10 +36,27 @@
 <script>
   pannellum.viewer('panorama', {
     type: 'equirectangular',
-    panorama: 'panorama.jpg', // 撮影した2:1の全天球画像ファイル名
-    autoLoad: true,           // ページを開いたときに自動読み込み
-    autoRotate: -2,           // ゆっくり自動回転（不要ならこの行を削除）
-    compass: false            // コンパス表示の有無
+    panorama: './panorama.jpg',  // 必ず相対パス「./」で指定する
+    
+    // 表示・操作の制御
+    autoLoad: true,             // ページ表示時に即座に画像を読み込む
+    autoRotate: -1.5,           // 読み込み後の自動水平回転スピード（0で無効化）
+    autoRotateInactivityDelay: 3000, // ユーザーが操作を止めて3秒後に自動回転を再開
+    
+    // 画角（ズーム）の制限
+    hfov: 100,                  // 初期視野角（広角具合。標準は100程度）
+    minHfov: 50,                // 最大ズームイン制限（歪み防止）
+    maxHfov: 120,               // 最大ズームアウト制限（魚眼歪み防止）
+    
+    // モバイル・操作性設定
+    orientationOnByDefault: false, // スマホの傾き連動（ジャイロ）を最初からONにするか
+    showZoomCtrl: true,         // 画面上の +/- ズームボタン
+    showFullscreenCtrl: true,   // 全画面切り替えボタン
+    compass: true,              // コンパス（方位磁針）アイコンの表示
+    
+    // テキスト情報
+    title: '360° View Sample',
+    author: 'Takumi'
   });
 </script>
 
