@@ -2,30 +2,124 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <!-- スマホの画面自動拡大や意図しないバウンスを防ぐviewport設定 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>360° パノラマビューア</title>
+  <title>360° パノラマビュー</title>
   
-  <!-- Pannellum CDN -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
   <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
 
   <style>
     * {
       box-sizing: border-box;
-      -webkit-touch-callout: none;
-    }
-    html, body {
       margin: 0;
       padding: 0;
+    }
+    html, body {
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background-color: #000;
+      background: #000;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
     #panorama {
       width: 100%;
       height: 100%;
+    }
+
+    /* --- ピン本体のデザイン --- */
+    .custom-pin {
+      width: 20px !important;
+      height: 20px !important;
+      background-color: #007aff !important;
+      border: 2.5px solid #ffffff !important;
+      border-radius: 50% !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.2s ease, background-color 0.2s ease;
+    }
+    .custom-pin:hover {
+      transform: scale(1.2);
+      background-color: #0056b3 !important;
+    }
+
+    /* --- 常時表示するタイトルラベル --- */
+    .custom-pin-label {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-top: 6px;
+      background: rgba(0, 0, 0, 0.75);
+      color: #ffffff;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      pointer-events: none; /* ラベルをクリックしてもピンのクリックが反応するようにする */
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* --- ポップアップモーダル（説明画面） --- */
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    #modal-overlay.active {
+      display: flex;
+      opacity: 1;
+    }
+    .modal-card {
+      background: #ffffff;
+      width: 90%;
+      max-width: 380px;
+      border-radius: 14px;
+      padding: 22px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+      transform: translateY(15px);
+      transition: transform 0.25s ease;
+    }
+    #modal-overlay.active .modal-card {
+      transform: translateY(0);
+    }
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1c1c1e;
+      margin-bottom: 10px;
+    }
+    .modal-description {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #3a3a3c;
+      white-space: pre-wrap; /* 改行をそのまま反映 */
+    }
+    .modal-close-btn {
+      display: block;
+      width: 100%;
+      margin-top: 18px;
+      padding: 11px;
+      background: #007aff;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
     }
   </style>
 </head>
@@ -33,8 +127,172 @@
 
 <div id="panorama"></div>
 
+<!-- モーダルウィンドウ本体 -->
+<div id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal-card">
+    <h3 id="modal-title" class="modal-title"></h3>
+    <p id="modal-description" class="modal-description"></p>
+    <button class="modal-close-btn" onclick="hideModal()">閉じる</button>
+  </div>
+</div>
+
 <script>
+  // ▼▼ ここに管理エディタで作成・コピーしたピン一覧を貼り付けます ▼▼
+  const spotsData = [
+  {
+    "pitch": 21.4,
+    "yaw": 88.12,
+    "title": "モネの睡蓮（自作）",
+    "description": "上野の絵画教室で描いた。我ながら色味が良い。"
+  },
+  {
+    "pitch": 13.04,
+    "yaw": 109.18,
+    "title": "赤べこ",
+    "description": "大内宿で購入。しっかり頭が揺れる。可愛い。"
+  },
+  {
+    "pitch": 2.31,
+    "yaw": 109.79,
+    "title": "ポストカード",
+    "description": "美術館に行くと必ず買っている。好きな画家はモネ、ルノワール、シニャック。壁一面を埋めるまで貼り続ける。"
+  },
+  {
+    "pitch": 10.62,
+    "yaw": 128.72,
+    "title": "モネの画集",
+    "description": "表紙がオシャレすぎて即購入。"
+  },
+  {
+    "pitch": 13.44,
+    "yaw": 119.24,
+    "title": "suicaのペンギン",
+    "description": "東京駅のNEWDAYSで一目惚れ。"
+  },
+  {
+    "pitch": -14.96,
+    "yaw": 139.87,
+    "title": "サボテン",
+    "description": "いつの日か顔に刺さるとは思いながら枕元に飾っている。"
+  },
+  {
+    "pitch": -18.46,
+    "yaw": -173.56,
+    "title": "QGIS",
+    "description": "研究で使用している地図作成ソフト。基本こいつと睨めっこしている。"
+  },
+  {
+    "pitch": -19.92,
+    "yaw": -159.85,
+    "title": "スピーカー",
+    "description": "モニター付きの可愛いスピーカー。ボタンの押し心地がものすごく良い。"
+  },
+  {
+    "pitch": -12.79,
+    "yaw": -156.01,
+    "title": "サボテン",
+    "description": "カーテンを開ける時に手に刺さる。痛い。"
+  },
+  {
+    "pitch": -31.98,
+    "yaw": -103.72,
+    "title": "ベース",
+    "description": "高校で軽音部に入ってからずっと続けている。この2本以外にももう2本所有している。"
+  },
+  {
+    "pitch": 7.95,
+    "yaw": -95.99,
+    "title": "ネクタイとベルト",
+    "description": "ネクタイ集めにハマっていた時期があった。最近はめんどくさいので滅多につけない。"
+  },
+  {
+    "pitch": 19.5,
+    "yaw": -24.4,
+    "title": "サウナハット",
+    "description": "最近サウナにハマっていて、週1はサウナに通っている。サウナハットを被ることで頭が熱くなりすぎないので、じっくりサウナを楽しむことができる。"
+  },
+  {
+    "pitch": 17.7,
+    "yaw": 44.88,
+    "title": "ヘルメット",
+    "description": "1月にバイクの免許を取得。愛車はHONDA Rebel 250。夢はバイクで北海道1周。"
+  },
+  {
+    "pitch": 12.18,
+    "yaw": 55.07,
+    "title": "くまモン",
+    "description": "熊本旅行の際に一目惚れ。"
+  },
+  {
+    "pitch": -13.57,
+    "yaw": 55.8,
+    "title": "漫画置き場",
+    "description": "進撃の巨人、よふかしのうた、藤本タツキ短編集など。"
+  },
+  {
+    "pitch": 1.68,
+    "yaw": 58.26,
+    "title": "朝井リョウの小説",
+    "description": "一番好きな作家、朝井リョウ。中でも「正欲」が一番刺さった。たまに冒頭部分を読み返す。"
+  }
+];
+  // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+  // データをPannellumのホットスポット形式に変換
+  const formattedHotSpots = spotsData.map(item => ({
+    pitch: item.pitch,
+    yaw: item.yaw,
+    cssClass: 'custom-pin',
+    createTooltipFunc: function(pinElement) {
+      // 1. 常時表示タイトルラベルの追加
+      const label = document.createElement('span');
+      label.className = 'custom-pin-label';
+      label.textContent = item.title;
+      pinElement.appendChild(label);
+
+      // 2. ピンをクリックした時のポップアップ発火
+      pinElement.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showModal(item.title, item.description);
+      });
+    }
+  }));
+
+  // Pannellum初期化
   pannellum.viewer('panorama', {
+    type: 'equirectangular',
+    panorama: './panorama.jpg',
+    autoLoad: true,
+    autoRotate: -1.0,
+    autoRotateInactivityDelay: 3000,
+    hotSpots: formattedHotSpots
+  });
+
+  // モーダル表示制御
+  function showModal(title, desc) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-description').textContent = desc;
+    const overlay = document.getElementById('modal-overlay');
+    overlay.style.display = 'flex';
+    setTimeout(() => overlay.classList.add('active'), 10);
+  }
+
+  function hideModal() {
+    const overlay = document.getElementById('modal-overlay');
+    overlay.classList.remove('active');
+    setTimeout(() => { overlay.style.display = 'none'; }, 250);
+  }
+
+  function closeModal(event) {
+    // 背景（黒い部分）をクリックしたときだけ閉じる
+    if (event.target.id === 'modal-overlay') {
+      hideModal();
+    }
+  }
+</script>
+
+</body>
+</html>  pannellum.viewer('panorama', {
     type: 'equirectangular',
     panorama: './panorama.jpg',  // 必ず相対パス「./」で指定する
     
