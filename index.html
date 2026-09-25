@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>360° View</title>
+  <!-- Pannellum の CSS / JS を読み込み -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    #panorama {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<div id="panorama"></div>
+
+<script>
+  pannellum.viewer('panorama', {
+    type: 'equirectangular',
+    panorama: 'panorama.jpg', // 撮影した2:1の全天球画像ファイル名
+    autoLoad: true,           // ページを開いたときに自動読み込み
+    autoRotate: -2,           // ゆっくり自動回転（不要ならこの行を削除）
+    compass: false            // コンパス表示の有無
+  });
+</script>
+
+</body>
+</html>
