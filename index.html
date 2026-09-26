@@ -5,16 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>360° パノラマビュー</title>
   
-  <!-- Pannellum (360°ビュー) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
   <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
 
-  <!-- MapLibre GL JS (ズームインアニメーション) -->
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
-  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
-
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
     html, body {
       width: 100%;
       height: 100%;
@@ -22,62 +21,12 @@
       background: #000;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-
-    /* 360°ビュー */
     #panorama {
       width: 100%;
       height: 100%;
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 1;
     }
 
-    /* --- Google Earth風 ズームオーバーレイ --- */
-    #intro-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 9999;
-      background: #000;
-      transition: opacity 1.2s ease, visibility 1.2s ease;
-    }
-    #intro-overlay.fade-out {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
-    #map {
-      width: 100%;
-      height: 100%;
-    }
-
-    /* ズーム中のタイトル表示 */
-    .intro-hud {
-      position: absolute;
-      bottom: 40px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(8px);
-      padding: 10px 24px;
-      border-radius: 30px;
-      color: #ffffff;
-      font-size: 13px;
-      letter-spacing: 1px;
-      z-index: 10000;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      pointer-events: none;
-      animation: pulse 1.5s infinite alternate;
-    }
-    @keyframes pulse {
-      0% { opacity: 0.7; }
-      100% { opacity: 1; }
-    }
-
-    /* --- ピンとモーダルのスタイル --- */
+    /* --- ピン本体（位置ズレ防止・完全追従） --- */
     .custom-pin {
       width: 14px !important;
       height: 14px !important;
@@ -86,6 +35,8 @@
       cursor: pointer;
       position: absolute;
     }
+
+    /* --- ピン内部の丸（半透明・すりガラス） --- */
     .custom-pin-dot {
       width: 100%;
       height: 100%;
@@ -94,13 +45,16 @@
       border: 1.5px solid rgba(255, 255, 255, 0.45);
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
       backdrop-filter: blur(3px);
-      transition: transform 0.15s ease, background-color 0.15s ease;
+      transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
     }
     .custom-pin:hover .custom-pin-dot {
       transform: scale(1.3);
       background-color: rgba(0, 122, 255, 0.9);
       border-color: #ffffff;
+      box-shadow: 0 0 10px rgba(0, 122, 255, 0.5);
     }
+
+    /* --- 常時表示ラベル --- */
     .custom-pin-label {
       position: absolute;
       top: 100%;
@@ -112,68 +66,106 @@
       padding: 2px 6px;
       border-radius: 4px;
       font-size: 10px;
+      font-weight: 500;
       white-space: nowrap;
       pointer-events: none;
+      backdrop-filter: blur(4px);
       border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
+    /* --- ポップアップモーダル --- */
     #modal-overlay {
       display: none;
       position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       background: rgba(0, 0, 0, 0.65);
       backdrop-filter: blur(5px);
-      z-index: 10001;
-      align-items: center; justify-content: center;
-      opacity: 0; transition: opacity 0.25s ease;
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.25s ease;
     }
-    #modal-overlay.active { display: flex; opacity: 1; }
+    #modal-overlay.active {
+      display: flex;
+      opacity: 1;
+    }
     .modal-card {
-      background: #fff; width: 90%; max-width: 380px;
-      border-radius: 14px; padding: 20px;
-      box-shadow: 0 12px 30px rgba(0,0,0,0.35);
-      max-height: 85vh; overflow-y: auto;
+      background: #ffffff;
+      width: 90%;
+      max-width: 380px;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+      transform: translateY(15px);
+      transition: transform 0.25s ease;
+      max-height: 85vh;
+      overflow-y: auto;
     }
-    .modal-image { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; display: none; }
-    .modal-title { font-size: 17px; font-weight: 700; color: #1c1c1e; margin-bottom: 8px; }
-    .modal-description { font-size: 13.5px; line-height: 1.6; color: #3a3a3c; white-space: pre-wrap; }
+    #modal-overlay.active .modal-card {
+      transform: translateY(0);
+    }
+
+    /* モーダル内の画像 */
+    .modal-image {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 14px;
+      display: none; /* 画像指定がない時は非表示 */
+    }
+
+    .modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #1c1c1e;
+      margin-bottom: 8px;
+    }
+    .modal-description {
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: #3a3a3c;
+      white-space: pre-wrap;
+    }
     .modal-close-btn {
-      display: block; width: 100%; margin-top: 16px; padding: 10px;
-      background: #007aff; color: #fff; border: none; border-radius: 8px;
-      font-size: 14px; font-weight: 600; cursor: pointer; text-align: center;
+      display: block;
+      width: 100%;
+      margin-top: 16px;
+      padding: 10px;
+      background: #007aff;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
     }
   </style>
 </head>
 <body>
 
-  <!-- 360° パノラマビュー -->
-  <div id="panorama"></div>
+<div id="panorama"></div>
 
-  <!-- Google Earth風 ズームイントロ画面 -->
-  <div id="intro-overlay">
-    <div id="map"></div>
-    <div class="intro-hud">LOCATING...</div>
+<!-- モーダルウィンドウ本体 -->
+<div id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal-card">
+    <img id="modal-image" class="modal-image" src="" alt="Spot Image">
+    <h3 id="modal-title" class="modal-title"></h3>
+    <p id="modal-description" class="modal-description"></p>
+    <button class="modal-close-btn" onclick="hideModal()">閉じる</button>
   </div>
-
-  <!-- モーダルウィンドウ -->
-  <div id="modal-overlay" onclick="closeModal(event)">
-    <div class="modal-card">
-      <img id="modal-image" class="modal-image" src="" alt="Spot Image">
-      <h3 id="modal-title" class="modal-title"></h3>
-      <p id="modal-description" class="modal-description"></p>
-      <button class="modal-close-btn" onclick="hideModal()">閉じる</button>
-    </div>
-  </div>
+</div>
 
 <script>
-  // ==========================================
-  // 1. 自宅・目的地の座標設定
-  // ※ [経度(約139.x), 緯度(約35.x)] の順（Googleマップ等から取得）
-  // ==========================================
-  const TARGET_COORDS = [139.599376, 35.717785]; // 例: 東京駅周辺（ここを自宅に変更）
-
-  // 2. ピンのデータ設定
-    const spotsData = [
+  // ▼▼ ピンのデータ設定 ▼▼
+  // 画像を表示したいピンには "image": "./画像ファイル名.jpg" を追加します
+  const spotsData = [
   {
     "pitch": 11,
     "yaw": 108.76,
@@ -379,8 +371,8 @@
     "description": "モネの中で一番気に入っている絵。"
   }
   ];
-  
-  // 3. Pannellum 初期化
+  // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
   const formattedHotSpots = spotsData.map(item => ({
     pitch: item.pitch,
     yaw: item.yaw,
@@ -402,6 +394,7 @@
     }
   }));
 
+  // Pannellum初期化（自動回転は無効化）
   pannellum.viewer('panorama', {
     type: 'equirectangular',
     panorama: './panorama.jpg',
@@ -409,57 +402,12 @@
     hotSpots: formattedHotSpots
   });
 
-  // 4. MapLibre GL JS によるズームインアニメーション
-  const map = new maplibregl.Map({
-    container: 'map',
-    style: {
-      version: 8,
-      sources: {
-        'gsi-photo': {
-          type: 'raster',
-          // 国土地理院のシームレス空中写真タイル（無料・APIキー不要）
-          tiles: ['https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg'],
-          tileSize: 256,
-          attribution: '国土地理院'
-        }
-      },
-      layers: [{
-        id: 'gsi-photo-layer',
-        type: 'raster',
-        source: 'gsi-photo'
-      }]
-    },
-    center: [137.5, 36.0], // 初期視点（日本列島全体が見える位置）
-    zoom: 4.8,             // 宇宙・日本上空の広域スケール
-    pitch: 0,
-    interactive: false     // アニメーション中はユーザーの操作を制限
-  });
-
-  map.on('load', () => {
-    // 0.8秒ためてから目的地へ急降下
-    setTimeout(() => {
-      map.flyTo({
-        center: TARGET_COORDS,
-        zoom: 17.8,       // 地上すれすれまでズーム
-        pitch: 65,         // カメラを65度傾けてリアルな奥行きを出す
-        bearing: -20,      // 少し方角を回転させる
-        duration: 4500,    // 4.5秒かけてズーム
-        curve: 1.42,       // Google Earth特有の緩急カーブ
-        easing: (t) => t * (2 - t)
-      });
-    }, 800);
-  });
-
-  // アニメーションが目的地に到達した瞬間にフェードアウト
-  map.on('moveend', () => {
-    const overlay = document.getElementById('intro-overlay');
-    overlay.classList.add('fade-out');
-  });
-
-  // 5. モーダル制御
+  // モーダル表示制御
   function showModal(title, desc, imageUrl) {
     document.getElementById('modal-title').textContent = title;
     document.getElementById('modal-description').textContent = desc || '';
+    
+    // 画像の設定（URLがある場合のみ表示）
     const imgElement = document.getElementById('modal-image');
     if (imageUrl && imageUrl.trim() !== '') {
       imgElement.src = imageUrl;
@@ -468,6 +416,7 @@
       imgElement.src = '';
       imgElement.style.display = 'none';
     }
+
     const overlay = document.getElementById('modal-overlay');
     overlay.style.display = 'flex';
     setTimeout(() => overlay.classList.add('active'), 10);
@@ -483,7 +432,9 @@
   }
 
   function closeModal(event) {
-    if (event.target.id === 'modal-overlay') hideModal();
+    if (event.target.id === 'modal-overlay') {
+      hideModal();
+    }
   }
 </script>
 
