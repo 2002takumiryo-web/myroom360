@@ -26,7 +26,7 @@
       height: 100%;
     }
 
-    /* --- ピン本体（位置ズレ防止・完全追従） --- */
+    /* --- ピン本体（遅延なし・完全同期） --- */
     .custom-pin {
       width: 14px !important;
       height: 14px !important;
@@ -36,7 +36,7 @@
       position: absolute;
     }
 
-    /* --- ピン内部の丸（半透明・すりガラス） --- */
+    /* --- ピン内部の丸（透明すりガラス調） --- */
     .custom-pin-dot {
       width: 100%;
       height: 100%;
@@ -54,7 +54,7 @@
       box-shadow: 0 0 10px rgba(0, 122, 255, 0.5);
     }
 
-    /* --- 常時表示ラベル --- */
+    /* --- タイトルラベル --- */
     .custom-pin-label {
       position: absolute;
       top: 100%;
@@ -97,7 +97,7 @@
     .modal-card {
       background: #ffffff;
       width: 90%;
-      max-width: 380px;
+      max-width: 400px;
       border-radius: 14px;
       padding: 20px;
       box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
@@ -110,14 +110,20 @@
       transform: translateY(0);
     }
 
-    /* モーダル内の画像 */
-    .modal-image {
+    /* 画像・動画共通スタイル */
+    .modal-media {
       width: 100%;
-      max-height: 200px;
-      object-fit: cover;
+      max-height: 220px;
       border-radius: 8px;
       margin-bottom: 14px;
-      display: none; /* 画像指定がない時は非表示 */
+      display: none;
+      background: #000;
+    }
+    .modal-image {
+      object-fit: cover;
+    }
+    .modal-video {
+      object-fit: contain;
     }
 
     .modal-title {
@@ -155,7 +161,11 @@
 <!-- モーダルウィンドウ本体 -->
 <div id="modal-overlay" onclick="closeModal(event)">
   <div class="modal-card">
-    <img id="modal-image" class="modal-image" src="" alt="Spot Image">
+    <!-- 画像枠 -->
+    <img id="modal-image" class="modal-media modal-image" src="" alt="Spot Image">
+    <!-- 動画枠（スマホ用インライン再生対応） -->
+    <video id="modal-video" class="modal-media modal-video" controls playsinline preload="metadata"></video>
+    
     <h3 id="modal-title" class="modal-title"></h3>
     <p id="modal-description" class="modal-description"></p>
     <button class="modal-close-btn" onclick="hideModal()">閉じる</button>
@@ -164,7 +174,8 @@
 
 <script>
   // ▼▼ ピンのデータ設定 ▼▼
-  // 画像を表示したいピンには "image": "./画像ファイル名.jpg" を追加します
+  // 動画を表示したい場合は "video": "./ファイル名.mp4" を指定します
+  // 画像を表示したい場合は "image": "./ファイル名.jpg" を指定します
   const spotsData = [
   {
     "pitch": 11,
@@ -386,12 +397,12 @@
 
       pinElement.addEventListener('click', (e) => {
         e.stopPropagation();
-        showModal(item.title, item.description, item.image);
+        showModal(item.title, item.description, item.image, item.video);
       });
     }
   }));
 
-  // Pannellum初期化（自動回転は無効化）
+  // Pannellum初期化（自動スクロール無効）
   pannellum.viewer('panorama', {
     type: 'equirectangular',
     panorama: './panorama.jpg',
@@ -400,18 +411,31 @@
   });
 
   // モーダル表示制御
-  function showModal(title, desc, imageUrl) {
+  function showModal(title, desc, imageUrl, videoUrl) {
     document.getElementById('modal-title').textContent = title;
     document.getElementById('modal-description').textContent = desc || '';
-    
-    // 画像の設定（URLがある場合のみ表示）
-    const imgElement = document.getElementById('modal-image');
-    if (imageUrl && imageUrl.trim() !== '') {
-      imgElement.src = imageUrl;
-      imgElement.style.display = 'block';
-    } else {
-      imgElement.src = '';
-      imgElement.style.display = 'none';
+
+    const imgEl = document.getElementById('modal-image');
+    const videoEl = document.getElementById('modal-video');
+
+    // 直前の動画再生や音声をリセット
+    videoEl.pause();
+    videoEl.currentTime = 0;
+    videoEl.src = '';
+    videoEl.style.display = 'none';
+
+    imgEl.src = '';
+    imgEl.style.display = 'none';
+
+    // 動画が指定されている場合
+    if (videoUrl && videoUrl.trim() !== '') {
+      videoEl.src = videoUrl;
+      videoEl.style.display = 'block';
+    } 
+    // 画像が指定されている場合
+    else if (imageUrl && imageUrl.trim() !== '') {
+      imgEl.src = imageUrl;
+      imgEl.style.display = 'block';
     }
 
     const overlay = document.getElementById('modal-overlay');
@@ -419,11 +443,19 @@
     setTimeout(() => overlay.classList.add('active'), 10);
   }
 
+  // モーダル非表示処理（動画停止）
   function hideModal() {
     const overlay = document.getElementById('modal-overlay');
+    const videoEl = document.getElementById('modal-video');
+    
+    // モーダルを閉じたら動画を停止して音を止める
+    videoEl.pause();
+    videoEl.currentTime = 0;
+
     overlay.classList.remove('active');
     setTimeout(() => { 
       overlay.style.display = 'none';
+      videoEl.src = '';
       document.getElementById('modal-image').src = '';
     }, 250);
   }
